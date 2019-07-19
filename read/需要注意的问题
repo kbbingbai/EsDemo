@@ -1,0 +1,62 @@
+	match在匹配时会对所查找的关键词进行分词，然后按分词匹配查找，而term会直接对关键词进行查找。一般模糊查找的时候，多用match，而精确查找时可以使用term。
+	
+	举个例子说明一下：
+	
+	{  
+	    "match": { "title": "my cat"}  
+	}
+	{  
+	  "bool": {  
+	    "should": [  
+	      { "term": { "title": "my" }},  
+	      { "term": { "title": "cat"   }}  
+	    ]  
+	  }  
+	} 
+	match 会将关键词进行分词分成“my”和“cat”，查找时包含其中任一均可被匹配到。
+	
+	term结合bool使用，不进行分词，但是有2个关键词，并且使用“或”匹配，也就是会匹配关键字一“my”或关键字“cat”，效果和上面的match是相同的。如果要想精确的匹配“my cat”而不匹配“my lovely cat”，则可以如下方式匹配：
+	
+	{  
+	  "bool": {  
+	    "should": [  
+	      { "term": { "title": "my cat" }}  
+	    ]  
+	  }  
+	} 
+	是不是还挺简单的，有一点需要注意一下，term结合bool使用时：should是或，must是与，must_not是非(还有一种filter，不说了这个)
+	
+	{  
+	    "match": {  
+	        "title": {  
+	            "query":    "my cat",  
+	            "operator": "and"  
+	        }  
+	    }  
+	}  
+	{  
+	  "bool": {  
+	    "must": [  
+	      { "term": { "title": "my" }},  
+	      { "term": { "title": "cat"   }}  
+	    ]  
+	  }  
+	} 
+	上面这两个查询就是等效的，match的与对应bool的must，也就是说my和cat需要都出现才算匹配上
+--------------------- -------------------- -------------------- --------------------
+	处理json有下面几个框架
+	        <dependency>
+                <groupId>net.sf.json-lib</groupId>
+                <artifactId>json-lib</artifactId>
+                <version>2.3</version>
+                <classifier>jdk15</classifier>
+            </dependency>
+
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>fastjson</artifactId>
+                <version>1.2.47</version>
+            </dependency>
+
+
+
