@@ -2,7 +2,6 @@ package es.demo;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import org.apache.lucene.queryparser.flexible.standard.QueryParserUtil;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
@@ -38,7 +37,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -434,5 +432,147 @@ public class Test01 {
         }
         client.close();
     }
+
+    /**
+     * 2019-07-24
+     * 范围查询的日期格式，在elasticsearch 技术解析与实战181页
+     * 如果库里面存入的是：2019-05-06  但是我们查询的时候就是想这样查询：2019/05/06 ,就可以用下面的方法对日期进行格式化
+     */
+    @Test
+    public void test21() {
+        RangeQueryBuilder range = QueryBuilders.rangeQuery("birth").format("yyyy/MM/dd").gte("2019/05/05").lte("now");
+        SearchResponse searchResponse = client.prepareSearch("2019-06").setQuery(range).get();
+        SearchHits hits = searchResponse.getHits();
+        for (SearchHit temp : hits) {
+            System.out.println(temp.getSourceAsMap());
+        }
+        client.close();
+    }
+
+    /**
+     * 2019-07-24
+     * GET 2019-08/_search
+     {
+         "query": {
+             "exists":{
+                "field":"age"
+             }
+         }
+     }
+
+     *是否存在查询
+     1 能匹配出来的数据包括：
+         { "user": "jane" }
+         { "user": "" }
+         { "user": "-" }
+         { "user": ["jane"] }
+         { "user": ["jane", null ] }
+
+     2 不能匹配的数据
+         { "user": null }
+         { "user": [] }
+         { "user": [null] }
+         { "foo":  "bar" }
+     */
+    @Test
+    public void test22() {
+        ExistsQueryBuilder age = QueryBuilders.existsQuery("age");
+        SearchResponse searchResponse = client.prepareSearch("2019-06").setQuery(age).get();
+        SearchHits hits = searchResponse.getHits();
+        for (SearchHit temp : hits) {
+            System.out.println(temp.getSourceAsMap());
+        }
+        client.close();
+    }
+
+    /**
+     * 2019-07-25    在elasticsearch 技术解析与实战184页
+     * 写一个比较复杂的查询,有时间多看看
+     * 查询的结构为：
+    {
+        "bool": {
+            "must": [
+                {
+                    "term": {
+                        "user": {
+                            "value": "kimchy",
+                            "boost": 1
+                        }
+                    }
+                }
+            ],
+            "filter": [
+                {
+                    "term": {
+                        "tag": {
+                            "value": "tech",
+                            "boost": 1
+                        }
+                    }
+                }
+            ],
+            "must_not": [
+                {
+                    "range": {
+                        "age": {
+                            "from": 10,
+                            "to": 20,
+                            "include_lower": true,
+                            "include_upper": true,
+                            "boost": 1
+                        }
+                    }
+                }
+            ],
+            "should": [
+                {
+                    "term": {
+                        "tag": {
+                            "value": "wow",
+                             "boost": 1
+                        }
+                    }
+                },
+                {
+                    "term": {
+                        "tag": {
+                            "value": "elasticserch",
+                            "boost": 1
+                        }
+                    }
+                }
+            ],
+            "disable_coord": false,
+            "adjust_pure_negative": true,
+            "minimum_should_match": "2",
+            "boost": 1
+        }
+    }
+     */
+    @Test
+    public void test23() {
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+        BoolQueryBuilder must = boolQuery.must(QueryBuilders.termQuery("user", "kimchy"));
+        BoolQueryBuilder filter = must.filter(QueryBuilders.termQuery("tag", "tech"));
+        BoolQueryBuilder mustnot = filter.mustNot(QueryBuilders.rangeQuery("age").from(10).to(20));
+        BoolQueryBuilder should = mustnot.should(QueryBuilders.termQuery("tag", "wow")).should(QueryBuilders.termQuery("tag", "elasticserch"));
+        BoolQueryBuilder boolQueryBuilder = should.minimumShouldMatch(2);
+        SearchResponse searchResponse = client.prepareSearch("2019-06").setQuery(should).get();
+        SearchHits hits = searchResponse.getHits();
+        for (SearchHit temp : hits) {
+            System.out.println(temp.getSourceAsMap());
+        }
+        client.close();
+    }
+
+
+
+
+
+    
+    
+
+
+
 
 }
